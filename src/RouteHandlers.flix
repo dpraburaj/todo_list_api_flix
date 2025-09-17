@@ -31,15 +31,15 @@ mod RouteHandlers {
                 case None => None
             };
         match idOpt {
-        case None =>
-            failureResponse(StatusCode.BadRequest, "invalid id")
-        case Some(id) =>
-            match TaskRepo.get(id) {
             case None =>
-                failureResponse(StatusCode.NotFound, "not found")
-            case Some(t) =>
-                successResponse(Json.taskToJson(t))
-            }
+                failureResponse(StatusCode.BadRequest, "invalid id")
+            case Some(id) =>
+                match TaskRepo.get(id) {
+                case None =>
+                    failureResponse(StatusCode.NotFound, "not found")
+                case Some(t) =>
+                    successResponse(Json.taskToJson(t))
+                }
         }
 
     pub def handleNewTodo(req: Request): Response \ TaskRepo + IO =
@@ -47,16 +47,16 @@ mod RouteHandlers {
         let t = Json.jsonToTask(req#body);
         let newT = TaskRepo.newTask(0, t#title);
         match TaskRepo.insert(newT) {
-        case Result.Err(e) =>
-            failureResponse(StatusCode.BadRequest, e)
-        case Result.Ok(saved) =>
-            createdResponse(Json.taskToJson(saved))
+            case Result.Err(e) =>
+                failureResponse(StatusCode.BadRequest, e)
+            case Result.Ok(saved) =>
+                createdResponse(Json.taskToJson(saved))
         }
 
     pub def makeRouteHandler(dbPath: String, routeHandler: Request -> Response \ {TaskRepo, IO}): Handler \ IO =
         // IMPORTANT: primitiveRouteHandler should only be outside new Handler for perf reasons
         // It's purpose is to get a function without custom effects so that
-        // routeHandler's and the handle methods effects match
+        // routeHandler's effects and the handle methods effects match
         let primitiveRouteHandler = (request) -> run { routeHandler(request) } with TaskRepo.runWithIO(dbPath);
         new Handler {
             def handle(_this: Handler, ctx: Context): Unit \ IO =
