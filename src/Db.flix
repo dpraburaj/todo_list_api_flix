@@ -1,5 +1,15 @@
 // Module for direct SQL operations
 
+use Types.Task
+
+pub eff Db {
+    def init(): Unit
+    def insertTask(title: String): {id = Int32, title = String, isComplete = Bool}
+    def getTask(id: Int32): Option[{id = Int32, title = String, isComplete = Bool}]
+    def listTasks(): List[{id = Int32, title = String, isComplete = Bool}]
+    def markComplete(id: Int32): Result[String, {id = Int32, title = String, isComplete = Bool}]
+}
+
 mod Db {
     import java.sql.{DriverManager, ResultSet, Connection}
     import java.lang.Class
@@ -11,7 +21,7 @@ mod Db {
         conn.close();
         res
 
-    pub def init(dbPath: String): Unit \ IO =
+    def initDb(dbPath: String): Unit \ IO =
         Class.forName("org.sqlite.JDBC");
         let url = "jdbc:sqlite:${dbPath}";
         let conn = DriverManager.getConnection(url);
@@ -25,7 +35,7 @@ mod Db {
         stmt.close();
         conn.close()
 
-    pub def insertTask(dbPath: String, title: String): {id = Int32, title = String, isComplete = Bool} \ IO =
+    def insertTaskDb(dbPath: String, title: String): {id = Int32, title = String, isComplete = Bool} \ IO =
         withConnection(dbPath, conn -> {
             let ps = conn.prepareStatement("INSERT INTO tasks (title, is_complete) VALUES (?, 0)");
             ps.setString(1, title);
@@ -38,7 +48,7 @@ mod Db {
             {id = nid, title = title, isComplete = false}
         })
 
-    pub def getTask(dbPath: String, id: Int32): Option[{id = Int32, title = String, isComplete = Bool}] \ IO =
+    def getTaskDb(dbPath: String, id: Int32): Option[{id = Int32, title = String, isComplete = Bool}] \ IO =
         withConnection(dbPath, conn -> {
             let ps = conn.prepareStatement("SELECT id, title, is_complete FROM tasks WHERE id = ?");
             ps.setInt(1, id);
@@ -52,7 +62,7 @@ mod Db {
             res
         })
 
-    pub def listTasks(dbPath: String): List[{id = Int32, title = String, isComplete = Bool}] \ IO =
+    def listTasksDb(dbPath: String): List[{id = Int32, title = String, isComplete = Bool}] \ IO =
         withConnection(dbPath, conn -> {
             let ps = conn.prepareStatement("SELECT id, title, is_complete FROM tasks ORDER BY id");
             let rs = ps.executeQuery();
@@ -62,7 +72,7 @@ mod Db {
             res
         })
 
-    pub def markComplete(dbPath: String, id: Int32): Result[String, {id = Int32, title = String, isComplete = Bool}] \ IO =
+    def markCompleteDb(dbPath: String, id: Int32): Result[String, {id = Int32, title = String, isComplete = Bool}] \ IO =
         withConnection(dbPath, conn -> {
             let ps = conn.prepareStatement("UPDATE tasks SET is_complete = 1 WHERE id = ?");
             ps.setInt(1, id);
@@ -93,4 +103,17 @@ mod Db {
         let title = rs.getString(2);
         let isC = rs.getInt(3) != 0;
         {id=rid, title=title, isComplete=isC}
+
+    pub def runWithIO(dbPath: String, f: Unit -> a \ ef): a \ ef - Db + IO =
+        run { f() } with handler Db {
+            def init(k) = k(initDb(dbPath))
+
+            def insertTask(title, k) = k(insertTaskDb(dbPath, title))
+
+            def getTask(id, k) = k(getTaskDb(dbPath, id))
+
+            def listTasks(k) = k(listTasksDb(dbPath))
+
+            def markComplete(id, k) = k(markCompleteDb(dbPath, id))
+        }
 }

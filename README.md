@@ -116,6 +116,10 @@ Requests/sec:   2430.06
 Transfer/sec:    412.06KB
 ```
 
+**Note:** Writes can improved a lot(I got 10K/s with a test) by modifying SQLite pragmas for the DB by following things similar to [https://fractaledmind.com/2023/09/07/enhancing-rails-sqlite-fine-tuning/](Article). 
+
+The benchmarks are just posted for curiosity, I wouldn't use SQLite for production apps/services with concurrent users.
+
 ## Useful Flix Docs
 
 **Note:** This section is for LLMs/code agents to lookup Flix docs easily

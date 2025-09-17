@@ -7,14 +7,15 @@ mod WebServer {
     pub def start(): Unit \ IO =
         // Initialize SQLite DB 
         let dbName = "data.db";
-        Db.init(dbName);
+        run {
+            Db.init()
+        } with Db.runWithIO(dbName);
 
-        let app = Javalin.create();
-        
         // Curried function for convenience
         let routeHandler = makeRouteHandler(dbName);
 
         // Define route
+        let app = Javalin.create();
         app.get("/api/todos", routeHandler(handleTasksList));
         app.post("/api/todos", routeHandler(handleNewTodo));
         app.get("/api/todos/{id}", routeHandler(handleTaskDetail));
